@@ -76,4 +76,31 @@ for y in range(HEIGHT):
             row += "█"
         elif x == st.session_state.ball_x and y == st.session_state.ball_y:
             row += "●"
-        elif y == HEIGHT - 2 and
+        elif (y == HEIGHT - 2 and abs(x - st.session_state.paddle) <= 2):
+            row += "═"
+        else:
+            row += " "
+    board.append(row)
+
+st.markdown(
+    f"""
+    <div style="font-family: monospace;
+                font-size:18px;
+                background:black;
+                color:#00ff00;
+                padding:15px;
+                border-radius:10px">
+    {'<br>'.join(board)}
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
+# ---------- GAME STATUS ----------
+if st.session_state.game_over:
+    st.error("❌ Game Over — Press Restart")
+
+# ---------- AUTO REFRESH ----------
+if not st.session_state.game_over:
+    time.sleep(0.15)
+    st.rerun()
