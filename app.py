@@ -4,13 +4,24 @@ from streamlit.components.v1 import html
 
 st.set_page_config(page_title="Brick Breaker", layout="wide")
 
-# Game size (bigger display)
 WIDTH = 60
 HEIGHT = 22
 
-# ----------------- SESSION STATE INIT -----------------
-if "init" not in st.session_state:
-    st.session_state.init = True
+# ----------------- RESET FUNCTION -----------------
+def reset_game():
+    st.session_state.level = 1
+    st.session_state.paddle = WIDTH // 2
+    st.session_state.ball_x = WIDTH // 2
+    st.session_state.ball_y = HEIGHT - 4
+    st.session_state.dx = 1
+    st.session_state.dy = -1
+    st.session_state.bricks = setup_level(1)
+    st.session_state.game_over = False
+    st.session_state.key = None
+
+
+# ----------------- INIT -----------------
+if "level" not in st.session_state:
     st.session_state.level = 1
     st.session_state.paddle = WIDTH // 2
     st.session_state.ball_x = WIDTH // 2
@@ -38,6 +49,16 @@ def setup_level(level):
 if not st.session_state.bricks:
     st.session_state.bricks = setup_level(st.session_state.level)
 
+# ----------------- UI HEADER -----------------
+col1, col2 = st.columns([6, 1])
+with col2:
+    if st.button("🔄 Restart"):
+        reset_game()
+        st.rerun()
+
+st.markdown(f"## 🧱 Brick Breaker — Level {st.session_state.level}")
+st.markdown("⬅️ ➡️ **Use Arrow Keys to move paddle**")
+
 # ----------------- KEYBOARD INPUT -----------------
 html(
     """
@@ -55,12 +76,6 @@ html(
     height=0,
 )
 
-# Receive key input
-key = st.experimental_get_query_params().get("key", [None])[0]
-if key:
-    st.session_state.key = key
-
-# JS → Streamlit bridge
 html(
     """
     <script>
@@ -74,6 +89,10 @@ html(
     """,
     height=0,
 )
+
+key = st.experimental_get_query_params().get("key", [None])[0]
+if key:
+    st.session_state.key = key
 
 # ----------------- MOVE PADDLE -----------------
 if st.session_state.key == "LEFT":
@@ -112,18 +131,18 @@ for brick in st.session_state.bricks[:]:
         break
 
 # ----------------- LEVEL COMPLETE -----------------
-if not st.session_state.bricks:
+if not st.session_state.bricks and not st.session_state.game_over:
     if st.session_state.level < 5:
         st.session_state.level += 1
         st.session_state.bricks = setup_level(st.session_state.level)
         st.session_state.ball_x = WIDTH // 2
         st.session_state.ball_y = HEIGHT - 4
         st.session_state.dy = -1
-        st.success(f"🎉 Level {st.session_state.level - 1} Complete!")
+        st.success("🎉 Level Completed!")
         time.sleep(1)
     else:
         st.balloons()
-        st.success("🏆 All 5 Levels Completed!")
+        st.success("🏆 You completed all 5 levels!")
         st.session_state.game_over = True
 
 # Game over
@@ -148,14 +167,17 @@ for y in range(HEIGHT):
 
 st.markdown(
     f"""
-    <div style="font-family: monospace; font-size:18px; background:#000; color:#0f0; padding:15px">
+    <div style="font-family: monospace;
+                font-size:18px;
+                background:black;
+                color:#00ff00;
+                padding:15px;
+                border-radius:10px">
     {'<br>'.join(board)}
     </div>
     """,
     unsafe_allow_html=True,
 )
-
-st.markdown(f"### 🎯 Level: {st.session_state.level}  |  ⬅️ ➡️ Use Arrow Keys")
 
 # ----------------- REFRESH -----------------
 if not st.session_state.game_over:
