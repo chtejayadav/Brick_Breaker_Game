@@ -1,123 +1,79 @@
-import pygame
+import streamlit as st
+import time
 
-# Initialize pygame
-pygame.init()
+st.set_page_config(page_title="Brick Breaker", layout="centered")
 
-# Screen settings
-WIDTH, HEIGHT = 900, 650
-screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Brick Breaker Game")
+WIDTH = 40
+HEIGHT = 18
 
-# Colors
-WHITE = (255, 255, 255)
-RED = (220, 60, 60)
-BLUE = (80, 140, 255)
-BLACK = (0, 0, 0)
-GRAY = (40, 40, 40)
+# ---------- RESET GAME ----------
+def reset_game():
+    st.session_state.ball_x = WIDTH // 2
+    st.session_state.ball_y = HEIGHT - 4
+    st.session_state.dx = 1
+    st.session_state.dy = -1
+    st.session_state.paddle = WIDTH // 2
+    st.session_state.bricks = [(x, y) for y in range(2, 6) for x in range(5, WIDTH - 5)]
+    st.session_state.game_over = False
 
-# Font
-font = pygame.font.SysFont("arial", 26)
+# ---------- INIT ----------
+if "ball_x" not in st.session_state:
+    reset_game()
 
-# Clock
-clock = pygame.time.Clock()
+# ---------- UI ----------
+st.title("🧱 Brick Breaker Game")
 
-# Paddle settings
-paddle_width = 120
-paddle_height = 15
-paddle_x = WIDTH // 2 - paddle_width // 2
-paddle_y = HEIGHT - 50
-paddle_speed = 8
+col1, col2, col3 = st.columns([2, 2, 2])
 
-# Ball settings
-ball_radius = 9
-ball_x = WIDTH // 2
-ball_y = HEIGHT // 2
-ball_dx = 5
-ball_dy = -5
+with col1:
+    if st.button("⬅ LEFT"):
+        st.session_state.paddle = max(2, st.session_state.paddle - 2)
 
-# Brick settings
-brick_rows = 5
-brick_cols = 10
-brick_width = 75
-brick_height = 28
-brick_gap = 6
-bricks = []
+with col2:
+    if st.button("🔄 RESTART"):
+        reset_game()
 
-for row in range(brick_rows):
-    for col in range(brick_cols):
-        x = col * (brick_width + brick_gap) + 60
-        y = row * (brick_height + brick_gap) + 80
-        bricks.append(pygame.Rect(x, y, brick_width, brick_height))
+with col3:
+    if st.button("RIGHT ➡"):
+        st.session_state.paddle = min(WIDTH - 3, st.session_state.paddle + 2)
 
-score = 0
+# ---------- GAME LOGIC ----------
+if not st.session_state.game_over:
+    st.session_state.ball_x += st.session_state.dx
+    st.session_state.ball_y += st.session_state.dy
 
-# Gradient background
-def draw_background():
-    for y in range(HEIGHT):
-        shade = int(20 + (y / HEIGHT) * 40)
-        pygame.draw.line(screen, (shade, shade, shade), (0, y), (WIDTH, y))
+# Wall collision
+if st.session_state.ball_x <= 1 or st.session_state.ball_x >= WIDTH - 2:
+    st.session_state.dx *= -1
 
-# Game loop
-running = True
-while running:
-    draw_background()
+if st.session_state.ball_y <= 1:
+    st.session_state.dy *= -1
 
-    # Events
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
+# Paddle collision
+if (
+    st.session_state.ball_y == HEIGHT - 3
+    and abs(st.session_state.ball_x - st.session_state.paddle) <= 2
+):
+    st.session_state.dy *= -1
 
-    # Paddle movement
-    keys = pygame.key.get_pressed()
-    if keys[pygame.K_LEFT] and paddle_x > 0:
-        paddle_x -= paddle_speed
-    if keys[pygame.K_RIGHT] and paddle_x < WIDTH - paddle_width:
-        paddle_x += paddle_speed
+# Brick collision
+for brick in st.session_state.bricks[:]:
+    if (st.session_state.ball_x, st.session_state.ball_y) == brick:
+        st.session_state.bricks.remove(brick)
+        st.session_state.dy *= -1
+        break
 
-    paddle = pygame.Rect(paddle_x, paddle_y, paddle_width, paddle_height)
+# Game over
+if st.session_state.ball_y >= HEIGHT:
+    st.session_state.game_over = True
 
-    # Ball movement
-    ball_x += ball_dx
-    ball_y += ball_dy
-
-    # Wall collision
-    if ball_x - ball_radius <= 0 or ball_x + ball_radius >= WIDTH:
-        ball_dx *= -1
-    if ball_y - ball_radius <= 0:
-        ball_dy *= -1
-
-    # Paddle collision
-    if paddle.collidepoint(ball_x, ball_y + ball_radius):
-        ball_dy *= -1
-
-    # Brick collision
-    for brick in bricks[:]:
-        if brick.collidepoint(ball_x, ball_y):
-            bricks.remove(brick)
-            ball_dy *= -1
-            score += 10
-            break
-
-    # Game over
-    if ball_y > HEIGHT:
-        running = False
-
-    # Draw paddle (rounded)
-    pygame.draw.rect(screen, BLUE, paddle, border_radius=8)
-
-    # Draw ball
-    pygame.draw.circle(screen, WHITE, (ball_x, ball_y), ball_radius)
-
-    # Draw bricks (with outline)
-    for brick in bricks:
-        pygame.draw.rect(screen, RED, brick, border_radius=5)
-        pygame.draw.rect(screen, WHITE, brick, 1, border_radius=5)
-
-    # Draw score
-    score_text = font.render(f"Score: {score}", True, WHITE)
-    screen.blit(score_text, (20, 20))
-
-    pygame.display.update()
-    clock.tick(60)
-
-pygame.quit()
+# ---------- DRAW BOARD ----------
+board = []
+for y in range(HEIGHT):
+    row = ""
+    for x in range(WIDTH):
+        if (x, y) in st.session_state.bricks:
+            row += "█"
+        elif x == st.session_state.ball_x and y == st.session_state.ball_y:
+            row += "●"
+        elif y == HEIGHT - 2 and
